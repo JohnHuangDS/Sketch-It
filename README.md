@@ -3,7 +3,7 @@
 ## Overview
 Sketch It is a machine learning drawing game that I made for my capstone project during my Data Science Diploma program at BrainStation.  The inspiration comes from Quick Draw by Google ([https://quickdraw.withgoogle.com/](https://quickdraw.withgoogle.com/)).  
 
-The game starts with prompts the user to sketch an object on a piece of paper.  Once the user completes the drawing, it is placed in front of a webcame and the program will attempt to guess what the user has drawn.  If the guess is correct, the user will be able to move on to the next level.  There are a total of 4 levels, and each level the object is more difficult to draw (wineglass, sword, angel, and then yoga).
+In Sketch It, the player is tasked with drawing a certain object on paper for each level.  The player places the drawing infront of a camera.  If the object is correctly drawn, the player will be able to move onto the next level.
 
 ## Jupyter Notebooks
 There are 4 Jupyter Notebooks to explain the workflow/thought processes behind creating the game.
