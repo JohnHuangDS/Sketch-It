@@ -1,5 +1,11 @@
 import cv2
+import sys
+
 from settings import Settings
+from levels import Levels
+from display_screen import Display
+from imgprocessor import ImgProcessor
+
 class SketchIt:
     """Overall class to manage game assets and behavior"""
 
@@ -9,76 +15,84 @@ class SketchIt:
         #attributes
         self.settings = Settings()
         self.background_processed = None
+        self.levels = Levels()
+        self.cam = cv2.VideoCapture(0)
+        self.display = Display()
+        self.imgprocessor = ImgProcessor()
 
     #method
     def run_game(self):
         """Start the main loop for the game."""
-        #start video capture
-        video = cv2.VideoCapture(0)
+
         while True:
-            #
-            ret, frame = video.read()
+            #initiate start screen
+            self._start_screen(self.cam)
 
-            frame = self._start_screen(frame)
-            #show frame
-            cv2.imshow("CAN YOU DRAW",frame)
+            #check for events
+            self._check_events()
 
-            #for testing functions
-            print(self.background_processed)
+    #helper method
+    def _start_screen(self, cam):
+        """Start screen is the first screen the user sees"""
+
+        #read frame from camera feed
+        ret, frame = cam.read()
+
+        #diplay start screen
+        self.display.start_screen(frame)
+
+    #helper method
+    def _check_events(self):
+        """Checks for key presses and determines what to do next"""
+
+        """Responds to key presses"""
+        key = cv2.waitKey(1)
+
+        #c = start calibration and assign to background_processed 
+        if key == ord("c"):
+            self.background_processed = self._calibrate_background(self.cam)
+
+        #s = start game key
+        if key == ord("s"):
+            self._start_level(self.cam)
+
+        #q = exit game key 
+        if key == ord("q"):
+            sys.exit()
+
+
+    #helper method
+    def _calibrate_background(self,cam):
+        """Calibrates background to acccount for difference in lighting"""
+
+        while True:
+    
+            #read frame from camera feed
+            ret, frame = cam.read()
+
+            #display calibration feed
+            self.display.calibration_screen(frame)
 
             key = cv2.waitKey(1)
 
-            if key == ord("c"):
-                self.background_processed = self._calibrate_background()
-
-            if key == ord("q"):
-                break
-
-    #helper method
-    def _start_screen(self, frame):
-
-        cv2.putText(frame, "Welcome to 'Can you draw?''",(10, self.settings.font_y_pad),
-                cv2.FONT_HERSHEY_SIMPLEX, self.settings.font, self.settings.font_color, 2)
-
-        cv2.putText(frame, "Press (s) to start",(10,frame.shape[0]-2*self.settings.font_y_pad),
-                cv2.FONT_HERSHEY_SIMPLEX, self.settings.font, self.settings.font_color, 2)
-
-        cv2.putText(frame, "Press (c) to calibrate background",(10,frame.shape[0]-self.settings.font_y_pad),
-                cv2.FONT_HERSHEY_SIMPLEX, self.settings.font, self.settings.font_color, 2)
-
-        return (frame)
-
-
-
-    #helper method
-    def _calibrate_background(self):
-        cam = cv2.VideoCapture(0)
-        background = None
-        while True:
-            ret, background = cam.read()
-
-            cv2.putText(background, 'Calibrating Background',(10,self.settings.font_y_pad),
-                cv2.FONT_HERSHEY_SIMPLEX, self.settings.font, (0, 0, 0), 2)
-
-            cv2.putText(background, 'Press (y) to Continue',(10,background.shape[0]-self.settings.font_y_pad),
-                cv2.FONT_HERSHEY_SIMPLEX, self.settings.font, (0, 0, 0), 2)
-
-            cv2.imshow("CAN YOU DRAW",background)
-
-            key = cv2.waitKey(1)
-
+            #wait for y to continue
             if key == ord("y"):
                 break
-                
-        background_gray = cv2.cvtColor(background, cv2.COLOR_BGR2GRAY)
-        background_gray_blur = cv2.GaussianBlur(background_gray, (5,5),0)
-        background_proccessed = background_gray_blur
-        cam.release()
-        cv2.destroyAllWindows
+
+            if key == ord("q"):
+                sys.exit()
+        
+        #take the last frame and shown and process it (blur and grayscale)
+        print(frame)
+        background_proccessed = self.imgprocessor.process_image(frame)
         return(background_proccessed)
+
+    def _start_level(self, cam):
+        """Starts the current level"""
+        self.levels.play_level(cam)
 
 
 if __name__ == '__main__':
-	# Make a game instance, and run the game.
-	game = SketchIt()
-	game.run_game()
+    # Make a game instance, and run the game.
+    game = SketchIt()
+    game.run_game()
