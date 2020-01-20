@@ -31,7 +31,7 @@ def frame_preprocessing(frame_capture,x,y,w,h):
 	return(test_array)
 
 #load_model function loads a trained model from a json and loads the weights from a h5 file.
-def load_model(model_name, model_weight_name):
+def load_cnn_model(model_name, model_weight_name):
     json_file = open(model_name)
     loaded_model_json = json_file.read()
     json_file.close()
@@ -68,7 +68,7 @@ def model_reshape_predict(image, model, y_unique):
 
 def get_background(set_width,set_font,font_y_pad):
 	#initiate webcam
-	cam = cv2.VideoCapture(1)
+	cam = cv2.VideoCapture(0)
 
 	background= None
 	run = True
@@ -103,7 +103,7 @@ def get_background(set_width,set_font,font_y_pad):
 
 def get_level(level_name, correct_answer, background_processed, model, sketch_list,next_level,set_width):
 	cv2.destroyAllWindows
-	cam = cv2.VideoCapture(1)
+	cam = cv2.VideoCapture(0)
 
 	guess_array = np.array([])
 	correct = level_name
@@ -153,34 +153,7 @@ def get_level(level_name, correct_answer, background_processed, model, sketch_li
 	            sketch_w = w
 	            sketch_h = h
 
-	    try:
-	        cv2.rectangle(frame, (sketch_x-20,y-20),(sketch_x+sketch_w+20, sketch_y+sketch_h+20), (0,255,0),2)
-	            #image is not detected
-	        text_detection = "Detected"
 
-	            #Crop based on frame, then predict what it is.
-	        processed_frame = frame_preprocessing(dilate, sketch_x, sketch_y, sketch_w, sketch_h)
-	        guess, confidence = model_reshape_predict(processed_frame, model, sketch_list)
-	        guess_array = np.append(guess_array, guess)
-	        print(guess)
-
-	        #Put guess on to window
-
-
-	        #check to see if the last 50 items in gues
-	        final_guess = np.unique(guess_array[-40:])
-	        print(final_guess)
-	        if final_guess == correct:
-	            if next_level != 5:
-	            	text_guess = correct_answer + " Press (n) to continue"
-	            else:
-	                text_guess = correct_answer
-	            result = next_level
-	            answer = 1
-
-
-	    except:
-	        pass
 
 	    cv2.putText(frame, 'Lets see you draw a {}'.format(level_name),(10,font_y_pad),
 	            cv2.FONT_HERSHEY_SIMPLEX, int(set_font*1.5), (0, 0, 0), 2)

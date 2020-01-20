@@ -24,10 +24,10 @@ print(background_processed)
 print(background_processed.shape)
 
 #Load Test models
-model,sketch_list = test_functions.load_cnn_model('CNN_model_demo_day2.json','CNN_model_demo_day2.h5')
+model,sketch_list = test_functions.load_cnn_model('CNN_model.json','CNN_model.h5')
 print(sketch_list)
 
-what = cv2.VideoCapture(1)
+what = cv2.VideoCapture(0)
 run = True
 while run:
     #Load Level

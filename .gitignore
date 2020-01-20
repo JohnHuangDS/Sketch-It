@@ -6,3 +6,4 @@ lib
 CLI_Commands.rtf
 .Rhistory
 __pycache__
+.ipynb_checkpoints
