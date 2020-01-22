@@ -1,0 +1,9 @@
+.DS_Store
+pyvenv.cfg
+bin
+include
+lib
+CLI_Commands.rtf
+.Rhistory
+__pycache__
+.ipynb_checkpoints
