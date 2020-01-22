@@ -1,11 +1,13 @@
 import cv2
 import sys
 import imutils
+import numpy as np
 
 from settings import Settings
 from levels import Levels
 from display_screen import Display
 from imgprocessor import ImgProcessor
+from trained_model import Trained_Model
 
 class SketchIt:
     """Overall class to manage game assets and behavior"""
@@ -13,124 +15,96 @@ class SketchIt:
     def __init__(self):
         """Initialize the game, and create game resources."""
 
-        #attributes
         self.settings = Settings()
         self.background_processed = None
         self.cam = cv2.VideoCapture(0)
         self.display = Display()
         self.imgprocessor = ImgProcessor()
+        self.trained_model = Trained_Model()
+        self.background_processed = self._calibrate_background()
 
-        #calibrate background
-        self.background_processed = self._calibrate_background(self.cam)
-
-    #method
     def run_game(self):
         """Start the main loop for the game."""
 
         while True:
+            self._start_screen()
 
-            #initiate start screen
-            self._start_screen(self.cam)
+            if self.settings.current_level == 1:
+                self._check_events()
+            else:
+                self._play_level()
 
-            #check for events
-            self._check_events()
+    def _start_screen(self):
+        """Display the starting screen for the game"""
 
-    #helper method
-    def _start_screen(self, cam):
-        """Start screen is the first screen the user sees"""
-
-        #read frame from camera feed
-        ret, frame = cam.read()
-
-        #diplay start screen
+        ret, frame = self.cam.read()
         self.display.start_screen(frame)
 
 
-    #helper method
     def _check_events(self):
         """Checks for key presses and determines what to do next"""
 
-        """Responds to key presses"""
         key = cv2.waitKey(1)
 
-        #c = start calibration and assign to background_processed 
         if key == ord("c"):
-            self.background_processed = self._calibrate_background(self.cam)
+            self.background_processed = self._calibrate_background()
 
-        #s = start game key
         if key == ord("s"):
-            self._play_level(self.cam)
+            self._play_level()
 
-        #q = exit game key 
         if key == ord("q"):
             sys.exit()
 
 
-    #helper method
-    def _calibrate_background(self,cam):
-        """Calibrates background to acccount for difference in lighting"""
+    def _calibrate_background(self):
+        """Returns an array for the static background image"""
 
         while True:
     
-            #read frame from camera feed
-            ret, frame = cam.read()
-
-            #display calibration feed, feed a copy since we dont want to include the text
-            #into process_image later on
+            ret, frame = self.cam.read()
             self.display.calibration_screen(frame.copy())
-
             key = cv2.waitKey(1)
-
-            #wait for y to continue
             if key == ord("y"):
                 break
-
             if key == ord("q"):
                 sys.exit()
         
-        #take the last frame and shown and process it (blur and grayscale)
-        print(frame)
-        background_proccessed = self.imgprocessor.process_image(frame)
+        background_proccessed = self.imgprocessor.image_preprocessing(frame)
         return(background_proccessed)
 
-    def _play_level(self, cam):
+    def _play_level(self):
         """Displays the current level being played and prompts user to draw"""
-
-        draw_object = self.settings.level_answers[self.settings.current_level]
-
-        print(draw_object)
+        self.settings.reset_response()
+        object_str = self.settings.level_responses[self.settings.current_level][0]
+        prediction_array = []
+        next_level_flag = False
 
         while True:
-            # read frame frome camera
-            ret, frame = cam.read()
+            ret, frame = self.cam.read()
 
-            #process image for calculating contours
-            contour_image = self.imgprocessor.process_image(frame)
-            contour_image = self.imgprocessor.contour_preprocessing(contour_image, self.background_processed)
-
-            #find the contours
-            contour_dimensions = self._find_contours(contour_image.copy())
-            
-            #if a contour dimension is found, draw a bounding box and determine if image is passes
-            if contour_dimensions:
-                print(contour_dimensions)
-
-                bounding_box_x, bounding_box_y, bounding_box_w, bounding_box_h = contour_dimensions[0], contour_dimensions[1], contour_dimensions[2], contour_dimensions[3],
-
-                cv2.rectangle(frame, (bounding_box_x-20,bounding_box_y-20),(bounding_box_x+bounding_box_w+20, bounding_box_y+bounding_box_h+20),
-                    (0,255,0),2)
-
-            processed_frame = imgprocessor.model_preprocessing(contour_image)
+            self.settings.object_undetected()
+            contour_box = self._create_contour_box(frame)
 
 
+            if contour_box:
+                self.settings.object_detected()
+                prediction = self._predict_drawing(frame, contour_box)
+                prediction_array = np.append(prediction_array, prediction)
 
+            if len(prediction_array) > 5:
+                if len(np.unique(prediction_array[-5:])) == 1:
 
-            #display level screen
-            self.display.level_screen(frame, draw_object)
+                    correct_response = self._check_response(prediction_array[-1], object_str)
 
+                    if correct_response == True:
+                        next_level_flag = True
 
-            #Determining if a contour has been found
-        
+            if next_level_flag == True:
+                self.settings.correct_drawing_response(self.settings.current_level)
+                self.display.level_screen(frame, object_str, self.settings.object_detection, self.settings.response, contour_box)
+
+            else:
+                self.display.level_screen(frame, object_str, self.settings.object_detection, self.settings.response, contour_box)
 
 
             key = cv2.waitKey(1)
@@ -139,43 +113,87 @@ class SketchIt:
                 sys.exit()
 
             if key == ord("r"):
+                self.settings.reset_game()
                 break
 
-    def _find_contours(self,frame):
-        cnts = cv2.findContours(frame, cv2.RETR_EXTERNAL,
+            if next_level_flag == True and key == ord("n"):
+
+                if self.settings.current_level < self.settings.total_levels:
+                    self.settings.level_passed()
+                else:    
+                    self.settings.reset_game()
+                break
+
+ 
+    def _create_contour_box(self, frame):
+         #standard image processing
+        test_image = self.imgprocessor.image_preprocessing(frame)
+
+        #contour preprocessing dilates the strokes to make it larger
+        dilated_test_image = self.imgprocessor.contour_preprocessing(test_image, self.background_processed)
+
+        #creates a box around a drawing if it is detected
+        contour_box = self._find_contours(dilated_test_image.copy())
+
+        return(contour_box)
+
+
+    def _find_contours(self,test_image):
+        """Return a list of contour box dimensions"""
+
+        #initialize variables
+        x = None
+        y = None
+        w = None
+        h = None
+
+        #find contours
+        cnts = cv2.findContours(test_image, cv2.RETR_EXTERNAL,
             cv2.CHAIN_APPROX_SIMPLE)
         cnts = imutils.grab_contours(cnts)
- 
-        self.text_guess = 'Hmmmm'
-        max_contour = 4000
 
-        sketch_x = None
-        sketch_y = None
-        sketch_w = None
-        sketch_h = None
-        #loop through the contours, ignore them if they are too small
+        #go through the contours, ignore them if they are too small
         for c in cnts:
-            if cv2.contourArea(c) <self.settings.screen_width*self.settings.screen_width/250:
+            if cv2.contourArea(c) <self.settings.minimum_contour_area:
                 continue
-            #create and draw a bounding rectangle
+            #create variables of a bounding rectangle
             (x,y,w,h) = cv2.boundingRect(c)
-            c_area = w*h
-            if c_area > max_contour:
-                sketch_x = x
-                sketch_y = y
-                sketch_w = w
-                sketch_h = h
+        
+        #create varibale to return
+        contour_box = [x, y, w, h]
 
-        contour_dimensions = [sketch_x, sketch_y, sketch_w, sketch_h]
-
-        if contour_dimensions == [None, None, None, None]:
+        #if there are no contours, return nothings
+        if contour_box == [None, None, None, None]:
             pass
         else:
-            return(contour_dimensions)
+            #print(type(contour_box))
+            #print(contour_box)
+            return(contour_box)
 
-    
+    def _predict_drawing(self, frame, contour_box):
+        """Returns an string representing the class"""
+
+        #standard image processing
+        test_image = self.imgprocessor.image_preprocessing(frame)
+
+        #contour preprocessing dilates the strokes to make it larger
+        dilated_test_image = self.imgprocessor.contour_preprocessing(test_image, self.background_processed)
+
+        #preprocess image for model_testing
+        model_image_processed = self.imgprocessor.model_preprocessing(dilated_test_image, contour_box)
+
+        #test image against trained model
+        prediction = self.trained_model.predict_image(model_image_processed)
+
+        return(prediction)
 
 
+    def _check_response(self, stable_prediction, object_str):
+        """Returns True or False"""
+        if stable_prediction == object_str:
+            return(True)
+        else:
+            return(False)
 
 
 if __name__ == '__main__':
