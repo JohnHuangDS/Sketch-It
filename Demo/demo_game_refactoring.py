@@ -4,7 +4,6 @@ import imutils
 import numpy as np
 
 from settings import Settings
-from levels import Levels
 from display_screen import Display
 from imgprocessor import ImgProcessor
 from trained_model import Trained_Model

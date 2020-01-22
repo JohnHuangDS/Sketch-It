@@ -8,16 +8,14 @@ In Sketch It, the player is tasked with drawing a certain object on paper for ea
 ## Jupyter Notebooks
 There are 4 Jupyter Notebooks to explain the workflow/thought processes behind creating the game.
 1. Exploring the Data set - A look at the data set that will use to train classification models
-2. Logistic Regression - Logistic Regression, used for its simplicity and computational speed
-3. CNN - CNN using Keras to achieve higher test accuracy (95.6%)
-4. Building Functions - Functions used to track images through a webcam, and to process and predict images drawn by the user.
+2. Logistic Regression - The first classification model, used for its simplicity.
+3. CNN - Convolutional Neural Networking using Keras to achieve higher test accuracy (95.6%).
+From this notebook, we create the models that will be used in the Demo (CNN_model.json, CNN_model.h5)
+
 
 ## Demo Folder
-There are 4 files in this folder.
-1. demo_game.py - running this file will start the game
-2. test_functions.py - this file contains all the functions that are used in demo_game.py
-3. CNN_model.json -CNN model stored as a json file, loaded when demo_game.py is run
-4. CNN_model.h5 - weights of the CNN model, loaded when demo_game.py is run
-
-### to be completed
-1. Instructions on how to install packages and dependencies to work on other computers
+To run Sketch It on your own computer, download the demo folder.
+Create a virtual enviroment and install the requirements with the following command in terminal:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; pip install -r requirements.txt
+Run the game with:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; python sketch_it.py
