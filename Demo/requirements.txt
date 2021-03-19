@@ -1,6 +1,6 @@
 opencv-python==4.1.1.26
 imutils==0.5.3
-pillow==7.0.0
+pillow==8.1.1
 sklearn==0.0
 keras==2.3.1
 tensorflow==2.1.0
